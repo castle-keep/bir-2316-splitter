@@ -14,16 +14,20 @@ def extract_information(text):
                   re.sub(r"\s+", "", lines[10])]
     tin = "".join(numbers)
 
-    numbers = [re.sub(r"\s+", "", lines[54]),  # 3rd line
-                  re.sub(r"\s+", "", lines[55]),
+    for i, line in enumerate(lines, start=1):
+        if re.search( r"0\s+0\s+0\s+0\s+0", line):
+            numbers = [re.sub(r"\s+", "", lines[i-3]),  # 3rd line
+                  re.sub(r"\s+", "", lines[i-2]),
                   re.sub(r"\s+", "", lines[0])]
-    monthyear = "".join(numbers)
+            monthyear = "".join(numbers)
+
     return ""+name+"_"+tin+"_"+monthyear
 
 def process_page(reader, page_index, output):
     """Processes a single page in a separate thread."""
     page = reader.pages[page_index]
     text = page.extract_text() or ""
+
     try:
       extracted_info = extract_information(text)
 
@@ -43,7 +47,7 @@ def process_page(reader, page_index, output):
 
 
 def split_pdf(input_pdf, start_page=None, end_page=None):
-    """Splits the specified PDF into multiple files using threads."""
+    """Splits the specified PDF into multiple files."""
     if not os.path.exists(input_pdf):
         print(f"Error: {input_pdf} not found.")
         return
