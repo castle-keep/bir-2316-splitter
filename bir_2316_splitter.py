@@ -9,17 +9,27 @@ def extract_information(text):
 
     name = re.findall(r'.+,', text)[0][:-1]
     lines = text.split('\n')
-    numbers = [re.sub(r"\s+", "", lines[2]),  # 3rd line
-                  re.sub(r"\s+", "", lines[9]),  # 5th line
-                  re.sub(r"\s+", "", lines[10])]
+
+    # print(text)
+    # print('---------------------------')
+
+    # find the markers
+    m = []
+
+    for i, line in enumerate(lines):
+        if re.search(r"0\s+0\s+0\s+0\s+0", line):
+            m.append(i)
+
+    numbers = [re.sub(r"\s+", "", lines[m[0]-1]),  # 3rd line
+                  re.sub(r"\s+", "", lines[m[1]-3]),  # 5th line
+                  re.sub(r"\s+", "", lines[m[1]-2])]
     tin = "".join(numbers)
 
-    for i, line in enumerate(lines, start=1):
-        if re.search( r"0\s+0\s+0\s+0\s+0", line):
-            numbers = [re.sub(r"\s+", "", lines[i-3]),  # 3rd line
-                  re.sub(r"\s+", "", lines[i-2]),
-                  re.sub(r"\s+", "", lines[0])]
-            monthyear = "".join(numbers)
+
+    numbers = [re.sub(r"\s+", "", lines[m[2]-2]),  # 3rd line
+            re.sub(r"\s+", "", lines[m[2]-1]),
+            re.sub(r"\s+", "", lines[0])]
+    monthyear = "".join(numbers)
 
     return ""+name+"_"+tin+"_"+monthyear
 
@@ -27,6 +37,7 @@ def process_page(reader, page_index, output):
     """Processes a single page in a separate thread."""
     page = reader.pages[page_index]
     text = page.extract_text() or ""
+    extract_information(text)
 
     try:
       extracted_info = extract_information(text)
