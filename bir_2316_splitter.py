@@ -7,11 +7,8 @@ import threading
 def extract_information(text):
     """Extract information from the given text."""
 
-    name = re.findall(r'.+,', text)[0][:-1]
+    name = re.sub(r"_+", "", re.sub(r"\s+", "",re.findall(r'.+,', text)[0][:-1]))
     lines = text.split('\n')
-
-    # print(text)
-    # print('---------------------------')
 
     # find the markers
     m = []
@@ -20,38 +17,50 @@ def extract_information(text):
         if re.search(r"0\s+0\s+0\s+0\s+0", line):
             m.append(i)
 
-    numbers = [re.sub(r"\s+", "", lines[m[0]-1]),  # 3rd line
-                  re.sub(r"\s+", "", lines[m[1]-3]),  # 5th line
-                  re.sub(r"\s+", "", lines[m[1]-2])]
+    n = m[1]-2
+    if not re.sub(r"\s+", "", lines[n]).isdigit():
+        n = n-1
+
+    numbers = [re.sub(r"\s+", "", lines[m[0]-1]),
+                  re.sub(r"\s+", "", lines[n-1]),
+                  re.sub(r"\s+", "", lines[n])]
     tin = "".join(numbers)
 
+    n = m[2]-1
+    if not re.sub(r"\s+", "", lines[n]).isdigit():
+        n = n-1
 
-    numbers = [re.sub(r"\s+", "", lines[m[2]-2]),  # 3rd line
-            re.sub(r"\s+", "", lines[m[2]-1]),
+    numbers = [re.sub(r"\s+", "", lines[n-1]),
+            re.sub(r"\s+", "", lines[n]),
             re.sub(r"\s+", "", lines[0])]
     monthyear = "".join(numbers)
 
-    return ""+name+"_"+tin+"_"+monthyear
+    filename = ""+name+"_"+tin+"_"+monthyear
+    pattern = r"(?:[A-ZÑ]+\s+)?[A-ZÑ]+_[0-9]{9}_[0-9]{8}"
+
+    if not re.match(pattern, filename):
+        print(f'Detected wrong filename: {filename}')
+        return ""
+    return filename
 
 def process_page(reader, page_index, output):
     """Processes a single page in a separate thread."""
     page = reader.pages[page_index]
     text = page.extract_text() or ""
-    extract_information(text)
 
     try:
-      extracted_info = extract_information(text)
+      page_filename = extract_information(text)
 
-      if extracted_info:
+      if page_filename:
           writer = PyPDF2.PdfWriter()
           writer.add_page(page)
-          output_path = os.path.join(output, f"{extracted_info}.pdf")
+          output_path = os.path.join(output, f"{page_filename}.pdf")
 
           with open(output_path, "wb") as output_file:
               writer.write(output_file)
-          print(f"Page {page_index + 1} saved as {extracted_info}.pdf")
+          print(f"Page {page_index + 1} saved as {page_filename}.pdf")
       else:
-          print(f"No valid name, TIN, or date found on page {page_index + 1}, skipping.")
+          print(f"Could not find name, TIN and date on page {page_index + 1}, skipping.")
 
     except Exception as e:
       print(f"Page {page_index + 1} Could not be saved: {e}")
@@ -71,20 +80,12 @@ def split_pdf(input_pdf, start_page=None, end_page=None):
     with open(input_pdf, "rb") as file:
         reader = PyPDF2.PdfReader(file)
         total_pages = len(reader.pages)
+        print(f'{input_pdf} pages: {total_pages}')
 
         if start_page is None:
             start_page = 1
         if end_page is None:
             end_page = total_pages
-
-        # threads = []
-        # for i in range(start_page - 1, end_page):
-        #     thread = threading.Thread(target=process_page, args=(reader, i, output_path))
-        #     thread.start()
-        #     threads.append(thread)
-
-        # for thread in threads:
-        #     thread.join()
 
         for i in range(start_page - 1, end_page):
             process_page(reader, i, output_path)
